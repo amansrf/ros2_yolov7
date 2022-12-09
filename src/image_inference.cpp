@@ -44,7 +44,7 @@
 #include <sensor_msgs/msg/image.hpp>
 
 /* ----------------------- TensorRT & YOLOv7 Includes ----------------------- */
-#include <Yolov7.h>
+#include <ROS2_YOLOv7/Yolov7.h>
 
 /* ----------------------------- OpenCV Includes ---------------------------- */
 #include <opencv2/opencv.hpp>

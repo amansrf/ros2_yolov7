@@ -23,7 +23,7 @@
  */
 
 
-#include "Yolov7.h"
+#include <ROS2_YOLOv7/Yolov7.h>
 
 static const char* cocolabels[] = {
     "car", "bicycle", "person", "motorcycle", "airplane",
@@ -402,7 +402,7 @@ static std::tuple<uint8_t, uint8_t, uint8_t> random_color(int id){
     return hsv2bgr(h_plane, s_plane, 1);
 }
 
-static int Yolov7::DrawBoxesonGraph(cv::Mat &bgr_img, std::vector<std::vector<float>> nmsresult){
+int Yolov7::DrawBoxesonGraph(cv::Mat &bgr_img, std::vector<std::vector<float>> nmsresult){
     for(int i = 0; i < nmsresult.size(); ++i){
         auto& ibox = nmsresult[i];
         float left = ibox[0];
