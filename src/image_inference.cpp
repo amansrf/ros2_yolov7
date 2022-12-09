@@ -42,7 +42,6 @@
 /* ------------------------------ ROS2 Includes ----------------------------- */
 #include "rclcpp/rclcpp.hpp"
 #include <sensor_msgs/msg/image.hpp>
-#include <rmw_qos_profiles/qos_profiles.hpp>
 
 /* ----------------------- TensorRT & YOLOv7 Includes ----------------------- */
 #include <Yolov7.h>
@@ -57,7 +56,7 @@
 /* -------------------------------------------------------------------------- */
 /*                           CONSTANTS & PARAMETERS                           */
 /* -------------------------------------------------------------------------- */
-std::string ENGINE_PATH = "/home/roar/ART/perception/model_trials/NVIDIA_AI_IOT_tensorrt_yolov7/yolo_deepstream/tensorrt_yolov7/build/yolov7PTQ.engine"
+const std::string ENGINE_PATH = "/home/roar/ART/perception/model_trials/NVIDIA_AI_IOT_tensorrt_yolov7/yolo_deepstream/tensorrt_yolov7/build/yolov7PTQ.engine";
 
 /* -------------------------------------------------------------------------- */
 /*                              HELPER FUNCTIONS                              */
@@ -78,30 +77,35 @@ using namespace std::chrono_literals;
 
 class YOLOv7InferenceNode : public rclcpp::Node
 {
-public:
-  YOLOv7InferenceNode()
-  : Node("yolov7_inference_node"), count_(0)
-  {
-    /* ------------------------------- QOS Profile ------------------------------ */
-    auto sensor_msgs_qos = rmw_qos_profile_sensor_data;
-
-    /* --------------------------- Image Subscription --------------------------- */
-    image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
-      "/vimba_front_left_center/image",
-      sensor_msgs_qos,
-      std::bind(&YOLOv7InferenceNode::image_callback, this, std::placeholders::_1)
-    );
-
-    /* ----------------------------- Image Publisher ---------------------------- */
-    image_pub_ = this->create_publisher<sensor_msgs::msg::Image>(
-      "/vimba_front_left_center/det_image",
-      sensor_msgs_qos
-    );
-
+  public:
+    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
+    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_pub_;
+    
     /* ---------------------------- YOLOv7 Init Stuff --------------------------- */
-    Yolov7 yolov7(ENGINE_PATH);
+    Yolov7 yolov7;
+    yolov7 = Yolov7(std::string(ENGINE_PATH));
     std::vector<cv::Mat> bgr_imgs;
-  }
+
+    YOLOv7InferenceNode()
+    : Node("yolov7_inference_node")
+    {
+      /* ------------------------------- QOS Profile ------------------------------ */
+      rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
+      auto sensor_msgs_qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 1), qos_profile);
+
+      /* --------------------------- Image Subscription --------------------------- */
+      image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
+        "/vimba_front_left_center/image",
+        sensor_msgs_qos,
+        std::bind(&YOLOv7InferenceNode::image_callback, this, std::placeholders::_1)
+      );
+
+      /* ----------------------------- Image Publisher ---------------------------- */
+      image_pub_ = this->create_publisher<sensor_msgs::msg::Image>(
+        "/vimba_front_left_center/det_image",
+        sensor_msgs_qos
+      );
+    }
 
 
 private:
@@ -121,19 +125,19 @@ private:
 
     /* -------------------------- Preprocess the images ------------------------- */
     this->bgr_imgs.push_back(cv_ptr->image);
-    yolov7.preProcess(bgr_imgs);
+    (this->yolov7).preProcess(this->bgr_imgs);
 
     /* ------------------------------ Run Inference ----------------------------- */
     yolov7.infer();
 
     /* -------------------------- Run NMS & PostProcess ------------------------- */
-    std::vector<std::vector<std::vector<float>>> nmsresults = yolov7.PostProcess();
+    std::vector<std::vector<std::vector<float>>> nmsresults = yolov7().PostProcess();
 
     for(int j =0; j < nmsresults.size();j++){
         // TODO: Publish here!
         Yolov7::DrawBoxesonGraph(bgr_imgs[j],nmsresults[j]);
 
-        cv_ptr->image = bgr_imgs[j]
+        cv_ptr->image = bgr_imgs[j];
         image_pub_.publish(cv_ptr->toImageMsg());
         // std::string output_path = img_paths[j] + "detect" + std::to_string(j)+".jpg";      
         // cv::imwrite(output_path, bgr_imgs[j]);

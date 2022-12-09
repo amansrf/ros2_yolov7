@@ -5,6 +5,15 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+# Ignore CONDA
+if(DEFINED ENV{CONDA_PREFIX})
+  set(h5_ignore_path
+    $ENV{CONDA_PREFIX}/bin $ENV{CONDA_PREFIX}/lib $ENV{CONDA_PREFIX}/include
+    $ENV{CONDA_PREFIX}/Library/bin $ENV{CONDA_PREFIX}/Library/lib $ENV{CONDA_PREFIX}/Library/include
+  )
+  list(APPEND CMAKE_IGNORE_PATH ${h5_ignore_path})
+endif()
+
 ################## CUDA STUFF Begins here ##################
 enable_language( CUDA )
 
@@ -38,6 +47,7 @@ elseif(${CMAKE_HOST_SYSTEM_PROCESSOR} EQUAL x86_64)
 endif()
 
 include_directories( "${CMAKE_SOURCE_DIR}/src/" )
+include_directories( "${CMAKE_SOURCE_DIR}/include/ROS2_YOLOv7" )
 include_directories( "/usr/include/jsoncpp/")
 # global definitions
 add_definitions( -w)
