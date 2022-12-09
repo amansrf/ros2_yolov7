@@ -22,7 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-
+#include "../include/ROS2_YOLOv7/tools.h"
 #include <ROS2_YOLOv7/Yolov7.h>
 
 static const char* cocolabels[] = {

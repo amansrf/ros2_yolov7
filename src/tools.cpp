@@ -54,12 +54,12 @@ void Logger::log(Severity severity, const char* msg) noexcept {
     std::cerr << msg << std::endl;
 }
 
-template <typename T>
-std::unique_ptr<T, CuMemDeleter<T>> mallocCudaMem(size_t nbElems) {
-    T* ptr = nullptr;
-    checkCudaErrors(cudaMalloc((void**)&ptr, sizeof(T) * nbElems));
-    return std::unique_ptr<T, CuMemDeleter<T>>{ptr};
-}
+// template <typename T>
+// std::unique_ptr<T, CuMemDeleter<T>> mallocCudaMem(size_t nbElems) {
+//     T* ptr = nullptr;
+//     checkCudaErrors(cudaMalloc((void**)&ptr, sizeof(T) * nbElems));
+//     return std::unique_ptr<T, CuMemDeleter<T>>{ptr};
+// }
 
 std::unique_ptr<CUevent_st, EventDeleter> makeCudaEvent(int flags) {
     cudaEvent_t event;

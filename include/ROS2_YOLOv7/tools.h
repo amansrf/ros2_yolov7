@@ -53,8 +53,17 @@ struct CuMemDeleter {
     void operator()(T* p) noexcept { checkCudaErrors(cudaFree(p)); }
 };
 
+// template <typename T>
+// std::unique_ptr<T, CuMemDeleter<T>> mallocCudaMem(size_t nbElems);
+
+#ifndef __IMAGE_INFERENCE_CPP__
 template <typename T>
-std::unique_ptr<T, CuMemDeleter<T>> mallocCudaMem(size_t nbElems);
+std::unique_ptr<T, CuMemDeleter<T>> mallocCudaMem(size_t nbElems) {
+    T* ptr = nullptr;
+    checkCudaErrors(cudaMalloc((void**)&ptr, sizeof(T) * nbElems));
+    return std::unique_ptr<T, CuMemDeleter<T>>{ptr};
+};
+#endif
 
 struct EventDeleter {
     void operator()(CUevent_st* event) noexcept { checkCudaErrors(cudaEventDestroy(event)); }

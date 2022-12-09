@@ -26,6 +26,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#ifndef __IMAGE_INFERENCE_CPP__
+#define __IMAGE_INFERENCE_CPP__
 
 /* -------------------------------------------------------------------------- */
 /*                                  INCLUDES                                  */
@@ -138,3 +140,5 @@ int main(int argc, char * argv[])
   rclcpp::shutdown();
   return 0;
 }
+
+#endif
