@@ -165,10 +165,10 @@ class InferenceYOLOv7(Node):
 
         # ----------------------------- Camera Subscriber ---------------------------- #
         self.image_sub  = self.create_subscription(
-            msg_type    = CompressedImage,
-            # msg_type    = Image,
-            topic       = '/camera/front_left_center/image/compressed',
-            # topic       = '/vimba_front_left_center/image',
+            # msg_type    = CompressedImage,
+            msg_type    = Image,
+            # topic       = '/camera/front_left_center/image/compressed',
+            topic       = '/vimba_front_left_center/image',
             callback    = self.image_callback,
             qos_profile = self.qos_profile
         )
@@ -190,8 +190,8 @@ class InferenceYOLOv7(Node):
         print("Node Init Done!!! \n Waiting for Images:")
 
     def image_callback(self, msg):
-        self.cv_img = self.bridge.compressed_imgmsg_to_cv2(msg, "bgr8")
-        # self.cv_img = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+        # self.cv_img = self.bridge.compressed_imgmsg_to_cv2(msg, "bgr8")
+        self.cv_img = self.bridge.imgmsg_to_cv2(msg, "bgr8")
         img, img0   = self.yolo.img_preproc(self.cv_img)
 
         det_msg = Detection2D()
