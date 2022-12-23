@@ -1,9 +1,43 @@
-cmake_minimum_required(VERSION 3.8)
-project(ROS2_YOLOv7)
+################################################################################
+# SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: MIT
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+################################################################################
+cmake_minimum_required( VERSION 3.8 )
+
+project(ros2_yolov7)
+
+# Default to C++17.
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+
+if(NOT CMAKE_C_STANDARD)
+  set(CMAKE_C_STANDARD 99)
+endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
+
+set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -g -fpic -fpie -fpermissive  -std=c++11 -pthread" )
 
 # Ignore CONDA
 if(DEFINED ENV{CONDA_PREFIX})
@@ -14,32 +48,18 @@ if(DEFINED ENV{CONDA_PREFIX})
   list(APPEND CMAKE_IGNORE_PATH ${h5_ignore_path})
 endif()
 
-################## CUDA STUFF Begins here ##################
+find_package(ament_cmake_auto REQUIRED)
+find_package(OpenCV REQUIRED)
+find_package(CUDA REQUIRED)
 enable_language( CUDA )
 
-find_package(CUDA)
-set( CMAKE_C_STANDARD 99 )
-set( CMAKE_CXX_STANDARD 11 )
-set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -g -fpic -fpie -fpermissive  -std=c++11 -pthread" )
-find_package(OpenCV REQUIRED)
 include_directories( ${OpenCV_INCLUDE_DIRS})
-find_package(jsoncpp CONFIG REQUIRED)
 
-################## CUDA STUFF ENDS here ##################
-
-# find dependencies
-find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(sensor_msgs REQUIRED)
-# find_package(rmw_qos_profiles REQUIRED)
-find_package(cv_bridge REQUIRED)
-
-################## CUDA STUFF Begins here ##################
 # global include_directories
 include_directories( /usr/local/cuda/include )
 #add judgement about system:
-
 MESSAGE(STATUS "CMAKE_HOST_SYSTEM_PROCESSOR is ${CMAKE_HOST_SYSTEM_PROCESSOR}")
+
 if (${CMAKE_HOST_SYSTEM_PROCESSOR} EQUAL aarch64)
     include_directories( /usr/include/aarch64-linux-gnu/ ) # for jetson
 elseif(${CMAKE_HOST_SYSTEM_PROCESSOR} EQUAL x86_64)
@@ -47,8 +67,6 @@ elseif(${CMAKE_HOST_SYSTEM_PROCESSOR} EQUAL x86_64)
 endif()
 
 include_directories( "${CMAKE_SOURCE_DIR}/src/" )
-include_directories( "${CMAKE_SOURCE_DIR}/include/ROS2_YOLOv7" )
-include_directories( "/usr/include/jsoncpp/")
 # global definitions
 add_definitions( -w)
 
@@ -63,19 +81,48 @@ link_directories( "/usr/lib/" )
 link_directories( "/usr/local/lib/")
 link_directories( "/usr/local/cuda/lib64/" )
 
-FILE(GLOB_RECURSE YOLO_SRC src/Yolov7.cpp )
-add_library( yolo SHARED ${YOLO_SRC} )
-target_link_libraries(yolo PRIVATE nvinfer)
-target_link_libraries(yolo PRIVATE nvinfer_plugin)
-target_link_libraries(yolo PRIVATE nvparsers)
-target_link_libraries(yolo PRIVATE nvonnxparser cudart ${OpenCV_LIBS})
-################## CUDA STUFF ENDS here ##################
+ament_auto_find_build_dependencies(REQUIRED
+  ${${PROJECT_NAME}_BUILD_DEPENDS}
+  ${${PROJECT_NAME}_BUILDTOOL_DEPENDS}
+)
 
-add_executable(camera_inference_node src/image_inference.cpp)
-ament_target_dependencies(camera_inference_node rclcpp std_msgs)
+SET(${PROJECT_NAME}_LIB_HEADER
+  include/${PROJECT_NAME}/tools.h
+  include/${PROJECT_NAME}/Yolov7.h
+)
 
-install(TARGETS
-  camera_inference_node
-  DESTINATION lib/${PROJECT_NAME})
+SET(${PROJECT_NAME}_LIB_SRC
+  src/Yolov7.cpp
+)
 
-ament_package()
+
+# Export the library using ament_auto_cmake
+ament_auto_add_library(${PROJECT_NAME} SHARED 
+  ${${PROJECT_NAME}_LIB_SRC}
+  ${${PROJECT_NAME}_LIB_HEADER}
+)
+
+# Link the library to the required dependencies
+target_link_libraries(${PROJECT_NAME} nvinfer)
+target_link_libraries(${PROJECT_NAME} nvinfer_plugin)
+target_link_libraries(${PROJECT_NAME} nvparsers)
+target_link_libraries(${PROJECT_NAME} nvonnxparser cudart ${OpenCV_LIBS})
+
+ament_auto_add_executable(${PROJECT_NAME}_node_exe
+  src/image_inference_node.cpp
+)
+
+target_link_libraries(${PROJECT_NAME}_node_exe ${PROJECT_NAME} cudart ${OpenCV_LIBS})
+
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  set(ament_cmake_copyright_FOUND TRUE)
+  ament_lint_auto_find_test_dependencies()
+endif()
+
+ament_auto_package(INSTALL_TO_SHARE
+#   engines
+#   param
+#   launch
+)
+

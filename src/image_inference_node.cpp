@@ -31,76 +31,60 @@
 /*                                  INCLUDES                                  */
 /* -------------------------------------------------------------------------- */
 
-/* ------------------------ Standard Library Includes ----------------------- */
-#include <chrono>
-#include <memory>
-#include <vector>
-#include <numeric>
-#include <random>
-#include <string>
-
-/* ------------------------------ ROS2 Includes ----------------------------- */
-#include "rclcpp/rclcpp.hpp"
-#include <sensor_msgs/msg/image.hpp>
-
-/* ----------------------- TensorRT & YOLOv7 Includes ----------------------- */
-#include <Yolov7.h>
-
-/* ----------------------------- OpenCV Includes ---------------------------- */
-#include <opencv2/opencv.hpp>
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <cv_bridge/cv_bridge.h>
+#include "ros2_yolov7/image_inference_node.hpp"
 
 /* -------------------------------------------------------------------------- */
 /*                                 ROS2 NODE                                  */
 /* -------------------------------------------------------------------------- */
 using namespace std::chrono_literals;
 
-class YOLOv7InferenceNode : public rclcpp::Node
+YOLOv7InferenceNode::YOLOv7InferenceNode() : rclcpp::Node("yolov7_inference_node")
 {
-  public:
-    /* ---------------------------- YOLOv7 Init Stuff --------------------------- */
-    std::string engine_path_;
-    std::unique_ptr<Yolov7> yolov7_;
+    // TODO: Make _engine_path a launch parameter
+    _engine_path = "/home/roar/ART/perception/model_trials/NVIDIA_AI_IOT_tensorrt_yolov7/yolo_deepstream/tensorrt_yolov7/build/yolov7PTQ.engine";
 
-    YOLOv7InferenceNode() : Node("yolov7_inference_node")
-    {
-      /* ------------------------------- QOS Profile ------------------------------ */
-      rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
-      auto sensor_msgs_qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 1), qos_profile);
+    // Initialize the YOLOv7 Object
+    _yolov7 = std::make_unique<Yolov7>(_engine_path);
 
-      /* --------------------------- Image Subscription --------------------------- */
-      auto image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
-        "/vimba_front_left_center/image",
+    // Declare a pointer to bgr msgs in CV2 format
+    _bgr_imgs = std::make_shared<std::vector<cv::Mat>>();
+    // TODO: Relook at how many images you want to store here when generalizing to multiple cameras.
+    _bgr_imgs->reserve(1);
+
+
+    /* ------------------------------- QOS Profile ------------------------------ */
+    rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
+    auto sensor_msgs_qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 1), qos_profile);
+
+    // TODO: Make the camera topic variable and do synchronous subscription over 6 topics.
+    /* --------------------------- Image Subscription --------------------------- */
+    _image_sub = this->create_subscription<sensor_msgs::msg::Image>(
+        "vimba_front_left_center/image",
         sensor_msgs_qos,
         std::bind(&YOLOv7InferenceNode::image_callback, this, std::placeholders::_1)
-      );
+    );
 
-      /* ----------------------------- Image Publisher ---------------------------- */
-      image_pub_ = this->create_publisher<sensor_msgs::msg::Image>(
+    /* ----------------------------- Image Publisher ---------------------------- */
+    // TODO: DEBUG ONLY. REMOVE FROM PRODUCTION CODE.
+    _camera_img_with_det_pub = this->create_publisher<sensor_msgs::msg::Image>(
         "/vimba_front_left_center/det_image",
         sensor_msgs_qos
-      );
+    );
 
-      engine_path_ = "/home/roar/ART/perception/model_trials/NVIDIA_AI_IOT_tensorrt_yolov7/yolo_deepstream/tensorrt_yolov7/build/yolov7PTQ.engine";
-    
-      yolov7_ = std::make_unique<Yolov7>(engine_path_);
-    }
+    /* --------------------------- Detection Publisher -------------------------- */
+    _detection_pub = this->create_publisher<vision_msgs::msg::Detection3DArray>(
+        "/vimba_front_left_center/det3d",
+        sensor_msgs_qos
+    );
+}
 
 
-private:
-  rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
-  rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_pub_;
-
-  void image_callback(const sensor_msgs::msg::Image::SharedPtr msg)
-  {
+void YOLOv7InferenceNode::image_callback(const sensor_msgs::msg::Image::SharedPtr msg)
+{
     /* ------------------ Receive msg and convert to cv2 format ----------------- */
-    cv_bridge::CvImagePtr cv_ptr;
     try
     {
-        cv_ptr = cv_bridge::toCvCopy(msg, msg->encoding);
+        _cv_ptr = cv_bridge::toCvCopy(msg, msg->encoding);
     }
     catch (cv_bridge::Exception& e)
     {
@@ -108,28 +92,38 @@ private:
         return;
     }
 
+    // Assign the image to memory allocated to it, if unassigned, otherwise overwrite
+    if (_bgr_imgs->empty())
+    {
+        _bgr_imgs->push_back(_cv_ptr->image);
+    }
+    else
+    {
+        _bgr_imgs->at(0) = _cv_ptr->image;
+    }
+
     /* -------------------------- Preprocess the images ------------------------- */
-    std::vector<cv::Mat> bgr_imgs;
-    bgr_imgs.push_back(cv_ptr->image);
-    yolov7_->preProcess(bgr_imgs);
+    _yolov7->preProcess(*_bgr_imgs);
 
     /* ------------------------------ Run Inference ----------------------------- */
-    yolov7_->infer();
+    _yolov7->infer();
 
     /* -------------------------- Run NMS & PostProcess ------------------------- */
-    std::vector<std::vector<std::vector<float>>> nmsresults = yolov7_->PostProcess();
+    _nmsresults = _yolov7->PostProcess();
 
-    for(int j =0; j < nmsresults.size();j++){
-        // TODO: Publish here!
-        Yolov7::DrawBoxesonGraph(bgr_imgs[j],nmsresults[j]);
+    /* --------------------- Initialize a detection 3D array -------------------- */
+    vision_msgs::msg::Detection3DArray det3d;
 
-        cv_ptr->image = bgr_imgs[j];
-        image_pub_->publish(*(cv_ptr->toImageMsg()).get() );
+    for(int detection_index = 0; detection_index < _nmsresults.size(); detection_index++){
+        // TODO: We seem to writing to higher indexes than those that have been allocated.
+        Yolov7::DrawBoxesonGraph(_bgr_imgs->at(detection_index), _nmsresults[detection_index]);
+
+        _cv_ptr->image = _bgr_imgs->at(detection_index);
+        _camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
     }
 
 
-  }
-};
+}
 
 int main(int argc, char * argv[])
 {

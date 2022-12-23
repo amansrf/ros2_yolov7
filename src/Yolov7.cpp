@@ -23,22 +23,10 @@
  */
 
 
-#include "Yolov7.h"
+#include "ros2_yolov7/Yolov7.h"
 
 static const char* cocolabels[] = {
-    "car", "bicycle", "person", "motorcycle", "airplane",
-    "bus", "train", "truck", "boat", "traffic light", "fire hydrant",
-    "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse",
-    "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack",
-    "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis",
-    "snowboard", "sports ball", "kite", "baseball bat", "baseball glove",
-    "skateboard", "surfboard", "tennis racket", "bottle", "wine glass",
-    "cup", "fork", "knife", "spoon", "bowl", "banana", "apple", "sandwich",
-    "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake",
-    "chair", "couch", "potted plant", "bed", "dining table", "toilet", "tv",
-    "laptop", "mouse", "remote", "keyboard", "cell phone", "microwave",
-    "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase",
-    "scissors", "teddy bear", "hair drier", "toothbrush"
+    "car"
 };
 
 Yolov7::Yolov7(std::string engine_path) {
@@ -404,18 +392,18 @@ static std::tuple<uint8_t, uint8_t, uint8_t> random_color(int id){
 
 static int Yolov7::DrawBoxesonGraph(cv::Mat &bgr_img, std::vector<std::vector<float>> nmsresult){
     for(int i = 0; i < nmsresult.size(); ++i){
-        auto& ibox = nmsresult[i];
-        float left = ibox[0];
-        float top = ibox[1];
-        float right = ibox[2];
-        float bottom = ibox[3];
-        int class_label = ibox[4];
-        float confidence = ibox[5];
+        auto& ibox          = nmsresult[i];
+        float left          = ibox[0];
+        float top           = ibox[1];
+        float right         = ibox[2];
+        float bottom        = ibox[3];
+        int class_label     = ibox[4];
+        float confidence    = ibox[5];
         cv::Scalar color;
         std::tie(color[0], color[1], color[2]) = random_color(class_label);
         cv::rectangle(bgr_img, cv::Point(left, top), cv::Point(right, bottom), color, 3);
 
-        auto name      = cocolabels[class_label];
+        auto name      = cocolabels[0];
         auto caption   = cv::format("%s %.2f", name, confidence);
         int text_width = cv::getTextSize(caption, 0, 1, 2, nullptr).width + 10;
         cv::rectangle(bgr_img, cv::Point(left-3, top-33), cv::Point(left + text_width, top), color, -1);
