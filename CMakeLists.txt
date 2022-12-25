@@ -89,6 +89,7 @@ ament_auto_find_build_dependencies(REQUIRED
 SET(${PROJECT_NAME}_LIB_HEADER
   include/${PROJECT_NAME}/tools.h
   include/${PROJECT_NAME}/Yolov7.h
+  include/${PROJECT_NAME}/camera_intrinsics.hpp
 )
 
 SET(${PROJECT_NAME}_LIB_SRC

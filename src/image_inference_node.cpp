@@ -32,6 +32,7 @@
 /* -------------------------------------------------------------------------- */
 
 #include "ros2_yolov7/image_inference_node.hpp"
+#include "ros2_yolov7/camera_intrinsics.hpp"
 
 /* -------------------------------------------------------------------------- */
 /*                                 ROS2 NODE                                  */
@@ -102,27 +103,41 @@ void YOLOv7InferenceNode::image_callback(const sensor_msgs::msg::Image::SharedPt
         _bgr_imgs->at(0) = _cv_ptr->image;
     }
 
-    /* -------------------------- Preprocess the images ------------------------- */
+    // Preprocess the images
     _yolov7->preProcess(*_bgr_imgs);
 
-    /* ------------------------------ Run Inference ----------------------------- */
+    // Run Inference
     _yolov7->infer();
 
-    /* -------------------------- Run NMS & PostProcess ------------------------- */
+    // Run NMS & PostProcess
     _nmsresults = _yolov7->PostProcess();
 
-    /* --------------------- Initialize a detection 3D array -------------------- */
+    // Initialize a detection 3D array
     vision_msgs::msg::Detection3DArray det3d;
+    det3d.header.stamp      = msg->header.stamp;
+    det3d.header.frame_id   = "vimba_front_left_center";
 
-    for(int detection_index = 0; detection_index < _nmsresults.size(); detection_index++){
+
+    for(int detection_index = 0; detection_index < _nmsresults.size(); detection_index++)
+    {
         // TODO: We seem to writing to higher indexes than those that have been allocated.
         Yolov7::DrawBoxesonGraph(_bgr_imgs->at(detection_index), _nmsresults[detection_index]);
 
+        for(int i = 0; i < _nmsresults[detection_index].size(); ++i)
+        {
+            auto& ibox          = _nmsresults[detection_index][i];
+            float left          = ibox[0];
+            float top           = ibox[1];
+            float right         = ibox[2];
+            float bottom        = ibox[3];
+            int class_label     = ibox[4];
+            float confidence    = ibox[5];
+
+            
+        }
         _cv_ptr->image = _bgr_imgs->at(detection_index);
         _camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
     }
-
-
 }
 
 int main(int argc, char * argv[])
