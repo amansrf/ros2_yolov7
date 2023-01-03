@@ -42,7 +42,11 @@
 /* ------------------------------ ROS2 Includes ----------------------------- */
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/image.hpp"
-#include "vision_msgs/msg/detection3_d_array.hpp"
+#include "vision_msgs/msg/detection2_d_array.hpp"
+#include <message_filters/pass_through.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/sync_policies/latest_time.h>
+#include <message_filters/synchronizer.h>
 
 /* ----------------------- TensorRT & YOLOv7 Includes ----------------------- */
 #include "Yolov7.h"
@@ -74,23 +78,54 @@ private:
     /* ------------------- Subscriber & Publisher Declarations ------------------ */
     // Image Subscriber
     // TODO: Make this a Synchronized Image Subscriber to get all 6 images at once. 
-    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr _image_sub;
+    message_filters::Subscriber<sensor_msgs::msg::Image> _front_left_image_sub;
+    message_filters::Subscriber<sensor_msgs::msg::Image> _front_left_center_image_sub;
+    message_filters::Subscriber<sensor_msgs::msg::Image> _front_right_center_image_sub;
+    message_filters::Subscriber<sensor_msgs::msg::Image> _front_right_image_sub;
+    message_filters::Subscriber<sensor_msgs::msg::Image> _rear_right_image_sub;
+    message_filters::Subscriber<sensor_msgs::msg::Image> _rear_left_image_sub;
+
+    using SyncPolicy = message_filters::sync_policies::LatestTime<sensor_msgs::msg::Image,
+        sensor_msgs::msg::Image,
+        sensor_msgs::msg::Image,
+        sensor_msgs::msg::Image,
+        sensor_msgs::msg::Image,
+        sensor_msgs::msg::Image
+    >;
+    using Sync = message_filters::Synchronizer<SyncPolicy>;
+    std::shared_ptr<Sync> _sync_ptr;
 
     // Camera image with drawn bounding box for debug only
     // TODO: Remove this in production code.
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _camera_img_with_det_pub;
 
     // Detection Result Publisher.
-    rclcpp::Publisher<vision_msgs::msg::Detection3DArray>::SharedPtr _detection_pub;
+    rclcpp::Publisher<vision_msgs::msg::Detection2DArray>::SharedPtr _detection_pub;
 
     /* ------------------------ Image Handling Variables ------------------------ */
     // Converted CV image ptr
     std::shared_ptr<std::vector<cv::Mat>> _bgr_imgs;
     // CV ptr to msg
+    cv_bridge::CvImagePtr _cv_ptr_front_left;
+    cv_bridge::CvImagePtr _cv_ptr_front_left_center;
+    cv_bridge::CvImagePtr _cv_ptr_front_right_center;
+    cv_bridge::CvImagePtr _cv_ptr_front_right;
+    cv_bridge::CvImagePtr _cv_ptr_rear_right;
+    cv_bridge::CvImagePtr _cv_ptr_rear_left;
     cv_bridge::CvImagePtr _cv_ptr;
     // Output nms results from model
     std::vector<std::vector<std::vector<float>>> _nmsresults;
+    int _msg_filter_queue_size = 1;
 
     /* ------------------------- Image Callback Function ------------------------ */
-    void image_callback(const sensor_msgs::msg::Image::SharedPtr msg);
+    void sync_callback(
+        const sensor_msgs::msg::Image::ConstSharedPtr & front_left,
+        const sensor_msgs::msg::Image::ConstSharedPtr & front_left_center,
+        const sensor_msgs::msg::Image::ConstSharedPtr & front_right_center,
+        const sensor_msgs::msg::Image::ConstSharedPtr & front_right,
+        const sensor_msgs::msg::Image::ConstSharedPtr & rear_right,
+        const sensor_msgs::msg::Image::ConstSharedPtr & rear_left
+    );
+
+    cv_bridge::CvImagePtr cv_bridge_convert(const sensor_msgs::msg::Image::ConstSharedPtr & msg);
 };

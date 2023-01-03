@@ -18,6 +18,8 @@
   <depend>opencv2</depend>
   <depend>cv_bridge</depend>
   <depend>cuda_runtime</depend>
+  <depend>std_msgs</depend>
+  <depend>message_filters</depend>
 
 
   <export>
