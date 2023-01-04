@@ -136,6 +136,26 @@ std::vector<cv::Mat> Yolov7::preProcess(std::vector<cv::Mat> &cv_img) {
     if(cv_img.size() > mInputDim.d[0] || cv_img.size() <=0) {
         std::cerr<<"error cv_img.size() in "<<__FUNCTION__<<std::endl;
     }
+    /* -------------------------- Undistort the images -------------------------- */
+    // Undistort the image
+    std::vector<cv::Mat> undistorted;
+    int i = 0;
+    for (const cv::Mat& distorted : cv_img)
+    {
+        cv::Mat img;
+        if (i == 0 || i >= 3){ // Fisheye Distortion
+            cv::fisheye::undistortImage(distorted, img, cameraMatrix, distCoeffs);
+        } else { // Regular Distortion
+            cv::undistort(distorted, img, cameraMatrix, distCoeffs);
+        }
+        undistorted.push_back(img);
+        i ++;
+    }
+    // Replace the original image with the undistorted images
+    cv_img = undistorted;
+
+    /* --------------------------- Undistort Complete --------------------------- */
+    
 
     std::vector<cv::Mat> nchwMats;
     
