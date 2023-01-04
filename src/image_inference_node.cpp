@@ -211,6 +211,10 @@ void YOLOv7InferenceNode::sync_callback(
         _cv_ptr->image = _bgr_imgs->at(detection_index);
         _camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
     }
+    
+    // Publish the Detection2DArray if the size is greater than 0
+    if (det2d_array.detections.size() > 0)
+        _det2d_array_pub->publish(det2d_array);
 
 }
 
