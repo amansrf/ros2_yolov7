@@ -46,6 +46,7 @@
 #include <message_filters/pass_through.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/latest_time.h>
+#include <message_filters/sync_policies/exact_time.h>
 #include <message_filters/synchronizer.h>
 
 /* ----------------------- TensorRT & YOLOv7 Includes ----------------------- */
@@ -85,7 +86,8 @@ private:
     message_filters::Subscriber<sensor_msgs::msg::Image> _rear_right_image_sub;
     message_filters::Subscriber<sensor_msgs::msg::Image> _rear_left_image_sub;
 
-    using SyncPolicy = message_filters::sync_policies::LatestTime<sensor_msgs::msg::Image,
+    using SyncPolicy = message_filters::sync_policies::LatestTime<
+        sensor_msgs::msg::Image,
         sensor_msgs::msg::Image,
         sensor_msgs::msg::Image,
         sensor_msgs::msg::Image,
@@ -98,6 +100,11 @@ private:
     // Camera image with drawn bounding box for debug only
     // TODO: Remove this in production code.
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _camera_img_with_det_pub;
+    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _frc_camera_img_with_det_pub;
+    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _fl_camera_img_with_det_pub;
+    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _fr_camera_img_with_det_pub;
+    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _rl_camera_img_with_det_pub;
+    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _rr_camera_img_with_det_pub;
 
     // Detection Result Publisher.
     rclcpp::Publisher<vision_msgs::msg::Detection2DArray>::SharedPtr _detection_pub;

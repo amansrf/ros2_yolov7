@@ -39,6 +39,8 @@
 
 #include "std_msgs/msg/header.hpp"
 
+#define CONF_THRESH (0.3)
+
 /* -------------------------------------------------------------------------- */
 /*                                 ROS2 NODE                                  */
 /* -------------------------------------------------------------------------- */
@@ -47,8 +49,9 @@ using namespace std::chrono_literals;
 YOLOv7InferenceNode::YOLOv7InferenceNode() : rclcpp::Node("yolov7_inference_node")
 {
     // TODO: Make _engine_path a launch parameter
-    _engine_path = "/home/roar/ART/perception/model_trials/NVIDIA_AI_IOT_tensorrt_yolov7/yolo_deepstream/tensorrt_yolov7/build/yolov7PTQ.engine";
-
+    // _engine_path = "/home/roar/ART/perception/model_trials/NVIDIA_AI_IOT_tensorrt_yolov7/yolo_deepstream/tensorrt_yolov7/build/yolov7PTQ.engine";
+    // _engine_path = "/home/roar/ART/perception/model_trials/NVIDIA_AI_IOT_tensorrt_yolov7/yolov7/yolov7_ptq_folded_fp32.engine";
+    _engine_path = "/home/roar/ART/perception/model_trials/yolov7_iac/yolov7_ptq_folded_f16_i8_flc_fl_rl.engine";
     // Initialize the YOLOv7 Object
     _yolov7 = std::make_unique<Yolov7>(_engine_path);
 
@@ -82,7 +85,7 @@ YOLOv7InferenceNode::YOLOv7InferenceNode() : rclcpp::Node("yolov7_inference_node
     using std::placeholders::_4;
     using std::placeholders::_5;
     using std::placeholders::_6;
-    _sync_ptr = std::make_shared<Sync>( SyncPolicy(this->get_clock()),   
+    _sync_ptr = std::make_shared<Sync>( SyncPolicy(),   
                                         _front_left_image_sub,
                                         _front_left_center_image_sub,
                                         _front_right_center_image_sub,
@@ -102,7 +105,7 @@ YOLOv7InferenceNode::YOLOv7InferenceNode() : rclcpp::Node("yolov7_inference_node
 
     /* --------------------------- Detection Publisher -------------------------- */
     _detection_pub = this->create_publisher<vision_msgs::msg::Detection2DArray>(
-        "/vimba_front_left_center/det3d",
+        "/vimba/det3d",
         sensor_msgs_qos
     );
 }
@@ -186,6 +189,11 @@ void YOLOv7InferenceNode::sync_callback(
             int class_label     = ibox[4];
             float confidence    = ibox[5];
 
+            if (confidence > CONF_THRESH)
+            {
+                continue;
+            }
+
             // Create a Detection2D message
             vision_msgs::msg::Detection2D det2d;
 
@@ -205,6 +213,7 @@ void YOLOv7InferenceNode::sync_callback(
             det2d.results.push_back(result);
 
             // Add the Detection2D message to the Detection2DArray
+
             det2d_array.detections.push_back(det2d);
             
         }
@@ -212,7 +221,16 @@ void YOLOv7InferenceNode::sync_callback(
         _camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
     }
 
+    /* -------------------------------------------------------------------------- */
+    /*       If the size of the detection is greater than zero, you publish       */
+    /* -------------------------------------------------------------------------- */
+    if (det2d_array.detections.size() > 0){
+        _detection_pub->publish(det2d_array);
 }
+
+}
+
+
 
 // ros::Time YOLOv7InferenceNode::find_max_stamp(
 //     const sensor_msgs::msg::Image::ConstSharedPtr & msg0,
