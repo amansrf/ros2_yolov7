@@ -99,7 +99,8 @@ private:
 
     // Camera image with drawn bounding box for debug only
     // TODO: Remove this in production code.
-    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _camera_img_with_det_pub;
+    // rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _camera_img_with_det_pub;
+    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _flc_camera_img_with_det_pub;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _frc_camera_img_with_det_pub;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _fl_camera_img_with_det_pub;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr _fr_camera_img_with_det_pub;

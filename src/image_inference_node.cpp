@@ -98,8 +98,32 @@ YOLOv7InferenceNode::YOLOv7InferenceNode() : rclcpp::Node("yolov7_inference_node
 
     /* ----------------------------- Image Publisher ---------------------------- */
     // TODO: DEBUG ONLY. REMOVE FROM PRODUCTION CODE.
-    _camera_img_with_det_pub = this->create_publisher<sensor_msgs::msg::Image>(
-        "/vimba_front_left_center/det_image",
+    // _camera_img_with_det_pub = this->create_publisher<sensor_msgs::msg::Image>(
+    //     "/vimba_front_left_center/det_image",
+    //     sensor_msgs_qos
+    // );
+    _flc_camera_img_with_det_pub = this->create_publisher<sensor_msgs::msg::Image>(
+        "/vimba_flc/det_image",
+        sensor_msgs_qos
+    );
+    _frc_camera_img_with_det_pub = this->create_publisher<sensor_msgs::msg::Image>(
+        "/vimba_frc/det_image",
+        sensor_msgs_qos
+    );
+    _fl_camera_img_with_det_pub = this->create_publisher<sensor_msgs::msg::Image>(
+        "/vimba_fl/det_image",
+        sensor_msgs_qos
+    );
+    _fr_camera_img_with_det_pub = this->create_publisher<sensor_msgs::msg::Image>(
+        "/vimba_fr/det_image",
+        sensor_msgs_qos
+    );
+    _rl_camera_img_with_det_pub = this->create_publisher<sensor_msgs::msg::Image>(
+        "/vimba_rl/det_image",
+        sensor_msgs_qos
+    );
+    _rr_camera_img_with_det_pub = this->create_publisher<sensor_msgs::msg::Image>(
+        "/vimba_rr/det_image",
         sensor_msgs_qos
     );
 
@@ -217,9 +241,23 @@ void YOLOv7InferenceNode::sync_callback(
             det2d_array.detections.push_back(det2d);
             
         }
-        _cv_ptr->image = _bgr_imgs->at(detection_index);
-        _camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
+        // _cv_ptr->image = _bgr_imgs->at(detection_index);
+        // _camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
     }
+    // _cv_ptr->image = _bgr_imgs->at(detection_index);
+    // _camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
+    _cv_ptr->image = _bgr_imgs->at(0);
+    _flc_camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
+    _cv_ptr->image = _bgr_imgs->at(1);
+    _frc_camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
+    _cv_ptr->image = _bgr_imgs->at(2);
+    _fl_camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
+    _cv_ptr->image = _bgr_imgs->at(3);
+    _fr_camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
+    _cv_ptr->image = _bgr_imgs->at(4);
+    _rl_camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
+    _cv_ptr->image = _bgr_imgs->at(5);
+    _rr_camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
 
     /* -------------------------------------------------------------------------- */
     /*       If the size of the detection is greater than zero, you publish       */
