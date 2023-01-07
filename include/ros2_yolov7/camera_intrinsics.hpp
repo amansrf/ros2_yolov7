@@ -37,3 +37,11 @@ static const CameraIntrinsics vimba_rear_right_intrinsics = {
     (cv::Mat_<double>(1,5) << -0.192458, 0.059495, -0.000126, 0.000092, 0.000000)
 };
 
+CameraIntrinsics* camera_intrinsics = new CameraIntrinsics[6]{ 
+    vimba_front_left_intrinsics,
+    vimba_front_left_center_intrinsics, 
+    vimba_front_right_center_intrinsics,
+    vimba_front_right_intrinsics,
+    vimba_rear_right_intrinsics,
+    vimba_rear_left_intrinsics
+};

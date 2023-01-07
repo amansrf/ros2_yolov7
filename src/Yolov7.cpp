@@ -24,6 +24,7 @@
 
 #include "ros2_yolov7/Yolov7.h"
 
+
 static const char* cocolabels[] = {
     "car"
 };
@@ -138,8 +139,21 @@ std::vector<cv::Mat> Yolov7::preProcess(std::vector<cv::Mat> &cv_img) {
     }
 
     std::vector<cv::Mat> nchwMats;
-    
+
     for(int i = 0; i< cv_img.size();i++){
+
+        /* -------------------------------------------------------------------------- */
+        /*                             Undistort the image                            */
+        /* -------------------------------------------------------------------------- */
+
+        // Undistort the image
+        cv::Mat undistorted;
+        if (i == 0 || i==3 || i ==4 || i==5){
+            cv::fisheye::undistortImage(cv_img[i], undistorted, camera_intrinsics[i].cameraMatrix, camera_intrinsics[i].distortionCoefficients);
+        } else {
+            cv::undistort(cv_img[i], undistorted, camera_intrinsics[i].cameraMatrix, camera_intrinsics[i].distortionCoefficients);
+        }
+
         float scale_x = mInputDim.d[3] / (float)cv_img[i].cols;
         float scale_y = mInputDim.d[2] / (float)cv_img[i].rows;
         float scale = std::min(scale_x, scale_y);
@@ -154,6 +168,7 @@ std::vector<cv::Mat> Yolov7::preProcess(std::vector<cv::Mat> &cv_img) {
         cv::invertAffineTransform(m2x3_i2d, m2x3_d2i);
         std::vector<float> d2i_1{d2i[0],d2i[1],d2i[2],d2i[3],d2i[4],d2i[5]};
         this->md2i.push_back(d2i_1);
+        
         cv::Mat input_image;
         cv::cvtColor(cv_img[i], input_image, cv::COLOR_BGR2RGB);
         cv::warpAffine(input_image, input_image, m2x3_i2d, cv::Size(mInputDim.d[3], mInputDim.d[2]), cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar::all(114));

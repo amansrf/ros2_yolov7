@@ -145,11 +145,17 @@ void YOLOv7InferenceNode::sync_callback(
 {
     auto current_time = this->now();
     /* ----------------------- Convert all messages to cv2 ---------------------- */
+    // std::cout<< "Flag" << std::endl;
     _cv_ptr_front_left          = this->cv_bridge_convert(front_left); 
+    // std::cout<< "Flag" << std::endl;
     _cv_ptr_front_left_center   = this->cv_bridge_convert(front_left_center); 
+    // std::cout<< "Flag" << std::endl;
     _cv_ptr_front_right_center  = this->cv_bridge_convert(front_right_center); 
+    // std::cout<< "Flag" << std::endl;
     _cv_ptr_front_right         = this->cv_bridge_convert(front_right); 
+    // std::cout<< "Flag" << std::endl;
     _cv_ptr_rear_right          = this->cv_bridge_convert(rear_right); 
+    // std::cout<< "Flag" << std::endl;
     _cv_ptr_rear_left           = this->cv_bridge_convert(rear_left); 
 
     // Assign the image to memory allocated to it, if unassigned, otherwise overwrite
@@ -202,7 +208,6 @@ void YOLOv7InferenceNode::sync_callback(
     for(int detection_index = 0; detection_index < _nmsresults.size(); detection_index++)
     {
         Yolov7::DrawBoxesonGraph(_bgr_imgs->at(detection_index), _nmsresults[detection_index]);
-
         for(int i = 0; i < _nmsresults[detection_index].size(); ++i)
         {
             auto& ibox          = _nmsresults[detection_index][i];
@@ -212,23 +217,21 @@ void YOLOv7InferenceNode::sync_callback(
             float bottom        = ibox[3];
             int class_label     = ibox[4];
             float confidence    = ibox[5];
-
-            if (confidence > CONF_THRESH)
+            std::cout<<"Cam "<<detection_index<<" "<<i<<" "<<confidence<< std::endl;
+            if (confidence < CONF_THRESH)
             {
                 continue;
             }
-
             // Create a Detection2D message
             vision_msgs::msg::Detection2D det2d;
-
             // Set the bounding box
             det2d.bbox.center.x = (left + right) / 2;
             det2d.bbox.center.y = (top + bottom) / 2;
             det2d.bbox.size_x   = right - left;
             det2d.bbox.size_y   = bottom - top;
-
             // Set header per box
             det2d.header = _headers[detection_index];
+            std::cout << det2d.header.frame_id << std::endl;
             
             // Set the class label and confidence
             vision_msgs::msg::ObjectHypothesisWithPose result;
@@ -237,7 +240,6 @@ void YOLOv7InferenceNode::sync_callback(
             det2d.results.push_back(result);
 
             // Add the Detection2D message to the Detection2DArray
-
             det2d_array.detections.push_back(det2d);
             
         }
@@ -246,25 +248,27 @@ void YOLOv7InferenceNode::sync_callback(
     }
     // _cv_ptr->image = _bgr_imgs->at(detection_index);
     // _camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
+    
     _cv_ptr->image = _bgr_imgs->at(0);
-    _flc_camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
-    _cv_ptr->image = _bgr_imgs->at(1);
-    _frc_camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
-    _cv_ptr->image = _bgr_imgs->at(2);
     _fl_camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
+    _cv_ptr->image = _bgr_imgs->at(1);
+    _flc_camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
+    _cv_ptr->image = _bgr_imgs->at(2);
+    _frc_camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
     _cv_ptr->image = _bgr_imgs->at(3);
     _fr_camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
     _cv_ptr->image = _bgr_imgs->at(4);
-    _rl_camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
-    _cv_ptr->image = _bgr_imgs->at(5);
     _rr_camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
+    _cv_ptr->image = _bgr_imgs->at(5);
+    _rl_camera_img_with_det_pub->publish(*(_cv_ptr->toImageMsg()).get());
 
     /* -------------------------------------------------------------------------- */
     /*       If the size of the detection is greater than zero, you publish       */
     /* -------------------------------------------------------------------------- */
+
     if (det2d_array.detections.size() > 0){
         _detection_pub->publish(det2d_array);
-}
+    }
 
 }
 

@@ -36,6 +36,7 @@
 #include <vector>
 #include <NvInferPlugin.h>
 #include "ros2_yolov7/tools.h"
+#include "ros2_yolov7/camera_intrinsics.hpp"
 #include <fstream>
 #include <algorithm>
 #include <numeric>
